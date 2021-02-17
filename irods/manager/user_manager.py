@@ -1,9 +1,11 @@
 from __future__ import absolute_import
+
+import hashlib
 import logging
 
 from irods.models import User, UserGroup
 from irods.manager import Manager
-from irods.message import GeneralAdminRequest, iRODSMessage
+from irods.message import GeneralAdminRequest, iRODSMessage, GetTempPasswordForOtherRequest
 from irods.exception import UserDoesNotExist, UserGroupDoesNotExist, NoResultFound
 from irods.api_number import api_number
 from irods.user import iRODSUser, iRODSUserGroup
@@ -57,6 +59,32 @@ class UserManager(Manager):
             conn.send(request)
             response = conn.recv()
         logger.debug(response.int_info)
+
+    def temp_password_for_user(self, user_name):
+        with self.sess.pool.get_connection() as conn:
+            message_body = GetTempPasswordForOtherRequest(
+                user_name,
+                None
+            )
+            request = iRODSMessage("RODS_API_REQ", msg=message_body,
+                                   int_info=api_number['GET_TEMP_PASSWORD_FOR_OTHER_AN'])
+
+            conn.send(request)
+            response = conn.recv()
+
+            # TODO: Remove this. The PHP code looked like this.
+            # $auth_str = str_pad($key. $this->account->pass, 100, "\0");
+            # $pwmd5 = bin2hex(md5($auth_str, true));
+
+            # TODO: Maybe this needs to be moved to the password_obfuscation.py. There is very similar code in there
+            auth_str = response + conn.account.password
+            auth_str = auth_str.ljust(100, chr(0)).encode('ascii')
+            password_md5 = hashlib.md5(auth_str.hexdigest())
+
+        logger.debug(response.int_info)
+
+        return password_md5
+
 
     def modify(self, user_name, option, new_value, user_zone=""):
 
