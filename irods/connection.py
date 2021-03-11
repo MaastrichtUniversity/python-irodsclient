@@ -566,3 +566,23 @@ class Connection(object):
 
         self.send(message)
         self.recv()
+
+    def temp_password(self):
+        request = iRODSMessage("RODS_API_REQ", msg=None,
+                               int_info=api_number['GET_TEMP_PASSWORD_AN'])
+
+        self.send(request)
+        response = self.recv()
+
+        # TODO: Remove this. The PHP code looked like this.
+        # $auth_str = str_pad($key. $this->account->pass, 100, "\0");
+        # $pwmd5 = bin2hex(md5($auth_str, true));
+
+        # TODO: Maybe this needs to be moved to the password_obfuscation.py. There is very similar code in there
+        auth_str = response + self.account.password
+        auth_str = auth_str.ljust(100, chr(0)).encode('ascii')
+        password_md5 = hashlib.md5(auth_str.hexdigest())
+
+        logger.debug(response.int_info)
+
+        return password_md5

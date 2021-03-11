@@ -1,9 +1,12 @@
 from __future__ import absolute_import
+
+import hashlib
 import logging
+import xml.etree.ElementTree as ET
 
 from irods.models import User, UserGroup
 from irods.manager import Manager
-from irods.message import GeneralAdminRequest, iRODSMessage
+from irods.message import GeneralAdminRequest, iRODSMessage, GetTempPasswordForOtherRequest
 from irods.exception import UserDoesNotExist, UserGroupDoesNotExist, NoResultFound
 from irods.api_number import api_number
 from irods.user import iRODSUser, iRODSUserGroup
@@ -57,6 +60,28 @@ class UserManager(Manager):
             conn.send(request)
             response = conn.recv()
         logger.debug(response.int_info)
+
+    def temp_password_for_user(self, user_name):
+        with self.sess.pool.get_connection() as conn:
+            message_body = GetTempPasswordForOtherRequest(
+                targetUser=user_name,
+                unused=None
+            )
+            request = iRODSMessage("RODS_API_REQ", msg=message_body,
+                                   int_info=api_number['GET_TEMP_PASSWORD_FOR_OTHER_AN'])
+
+            conn.send(request)
+            response = conn.recv()
+
+            auth_str = response.msg.decode("ascii")
+            hash_element = ET.fromstring(auth_str).find('stringToHashWith')
+            if hash_element is not None:
+                password = hash_element.text + conn.account.password
+                password = password.ljust(100, chr(0))
+                password_md5 = hashlib.md5(password.encode("utf-8"))
+                return password_md5.hexdigest()
+            else:
+                raise NoResultFound("Generating tmp password failed")
 
     def modify(self, user_name, option, new_value, user_zone=""):
 
