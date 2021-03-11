@@ -75,13 +75,13 @@ class UserManager(Manager):
 
             auth_str = response.msg.decode("ascii")
             hash_element = ET.fromstring(auth_str).find('stringToHashWith')
-            if hash_element:
+            if hash_element is not None:
                 password = hash_element.text + conn.account.password
                 password = password.ljust(100, chr(0))
                 password_md5 = hashlib.md5(password.encode("utf-8"))
                 return password_md5.hexdigest()
             else:
-                raise NoResultFound()
+                raise NoResultFound("Generating tmp password failed")
 
     def modify(self, user_name, option, new_value, user_zone=""):
 
