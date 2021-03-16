@@ -72,7 +72,6 @@ class UserManager(Manager):
 
             conn.send(request)
             response = conn.recv()
-            self.sess.cleanup()
 
         auth_str = response.msg.decode("ascii")
         hash_element = ET.fromstring(auth_str).find('stringToHashWith')
