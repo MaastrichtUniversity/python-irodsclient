@@ -498,10 +498,17 @@ class GeneralAdminRequest(Message):
 class GetTempPasswordForOtherRequest(Message):
     _name = 'getTempPasswordForOtherInp_PI'
     targetUser = StringProperty()
-    # TODO: Not sure this is needed. It was in the PHP code
     unused = StringProperty()
 
-    pass
+
+class GetTempPasswordForOtherOut(Message):
+    _name = 'getTempPasswordForOtherOut_PI'
+    stringToHashWith = StringProperty()
+
+
+class GetTempPasswordOut(Message):
+    _name = 'getTempPasswordOut_PI'
+    stringToHashWith = StringProperty()
 
 
 #define ticketAdminInp_PI "str *arg1; str *arg2; str *arg3; str *arg4; str *arg5; str *arg6;"

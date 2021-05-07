@@ -6,8 +6,8 @@ import xml.etree.ElementTree as ET
 
 from irods.models import User, UserGroup
 from irods.manager import Manager
-from irods.message import GeneralAdminRequest, iRODSMessage, GetTempPasswordForOtherRequest
-from irods.exception import UserDoesNotExist, UserGroupDoesNotExist, NoResultFound
+from irods.message import GeneralAdminRequest, iRODSMessage, GetTempPasswordForOtherRequest, GetTempPasswordForOtherOut
+from irods.exception import UserDoesNotExist, UserGroupDoesNotExist, NoResultFound, CAT_SQL_ERR
 from irods.api_number import api_number
 from irods.user import iRODSUser, iRODSUserGroup
 import irods.password_obfuscation as obf
@@ -69,19 +69,19 @@ class UserManager(Manager):
             )
             request = iRODSMessage("RODS_API_REQ", msg=message_body,
                                    int_info=api_number['GET_TEMP_PASSWORD_FOR_OTHER_AN'])
-
+            # Send request
             conn.send(request)
-            response = conn.recv()
 
-        auth_str = response.msg.decode("ascii")
-        hash_element = ET.fromstring(auth_str).find('stringToHashWith')
-        if hash_element is not None:
-            password = hash_element.text + conn.account.password
-            password = password.ljust(100, chr(0))
-            password_md5 = hashlib.md5(password.encode("utf-8"))
-            return password_md5.hexdigest()
-        else:
-            raise NoResultFound("Generating tmp password failed")
+            # Receive answer
+            try:
+                response = conn.recv()
+                logger.debug(response.int_info)
+            except CAT_SQL_ERR:
+                raise UserDoesNotExist()
+
+            # Convert and return answer
+            msg = response.get_main_message(GetTempPasswordForOtherOut)
+            return obf.create_temp_password(msg.stringToHashWith, conn.account.password)
 
     def modify(self, user_name, option, new_value, user_zone=""):
 

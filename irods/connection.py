@@ -7,12 +7,12 @@ import six
 import os
 import ssl
 import datetime
-
+import irods.password_obfuscation as obf
 
 from irods.message import (
     iRODSMessage, StartupPack, AuthResponse, AuthChallenge, AuthPluginOut,
     OpenedDataObjRequest, FileSeekResponse, StringStringMap, VersionResponse,
-    PluginAuthMessage, ClientServerNegotiation, Error)
+    PluginAuthMessage, ClientServerNegotiation, Error, GetTempPasswordOut)
 from irods.exception import get_exception_by_code, NetworkException
 from irods import (
     MAX_PASSWORD_LENGTH, RESPONSE_LEN,
@@ -571,18 +571,11 @@ class Connection(object):
         request = iRODSMessage("RODS_API_REQ", msg=None,
                                int_info=api_number['GET_TEMP_PASSWORD_AN'])
 
+        # Send and receive request
         self.send(request)
         response = self.recv()
-
-        # TODO: Remove this. The PHP code looked like this.
-        # $auth_str = str_pad($key. $this->account->pass, 100, "\0");
-        # $pwmd5 = bin2hex(md5($auth_str, true));
-
-        # TODO: Maybe this needs to be moved to the password_obfuscation.py. There is very similar code in there
-        auth_str = response + self.account.password
-        auth_str = auth_str.ljust(100, chr(0)).encode('ascii')
-        password_md5 = hashlib.md5(auth_str.hexdigest())
-
         logger.debug(response.int_info)
 
-        return password_md5
+        # Convert and return answer
+        msg = response.get_main_message(GetTempPasswordOut)
+        return obf.create_temp_password(msg.stringToHashWith, self.account.password)
