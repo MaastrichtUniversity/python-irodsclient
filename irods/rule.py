@@ -56,7 +56,7 @@ class Rule(object):
                     self.body += line
 
 
-    def execute(self):
+    def execute(self, session_clean_up=False):
         # rule input
         param_array = []
         for label, value in self.params.items():
@@ -75,6 +75,7 @@ class Rule(object):
         with self.session.pool.get_connection() as conn:
             conn.send(request)
             response = conn.recv()
-            out_param_array = response.get_main_message(MsParamArray)
-            self.session.cleanup()
+            out_param_array = response.get_main_message(MsParamArray)            
+            if session_clean_up:
+                self.session.cleanup()
         return out_param_array

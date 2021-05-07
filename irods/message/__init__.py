@@ -733,3 +733,4 @@ def empty_gen_query_out(cols):
         SqlResult_PI=sql_results
     )
     return gqo
+

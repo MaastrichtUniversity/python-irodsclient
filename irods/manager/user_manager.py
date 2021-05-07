@@ -1,5 +1,8 @@
 from __future__ import absolute_import
+
+import hashlib
 import logging
+import xml.etree.ElementTree as ET
 
 from irods.models import User, UserGroup
 from irods.manager import Manager
@@ -66,7 +69,6 @@ class UserManager(Manager):
             )
             request = iRODSMessage("RODS_API_REQ", msg=message_body,
                                    int_info=api_number['GET_TEMP_PASSWORD_FOR_OTHER_AN'])
-
             # Send request
             conn.send(request)
 
@@ -80,7 +82,6 @@ class UserManager(Manager):
             # Convert and return answer
             msg = response.get_main_message(GetTempPasswordForOtherOut)
             return obf.create_temp_password(msg.stringToHashWith, conn.account.password)
-
 
     def modify(self, user_name, option, new_value, user_zone=""):
 
